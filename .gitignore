@@ -1,0 +1,43 @@
+# AWS SAM
+.aws-sam/
+# 注意：samconfig.toml 應該提交到版本控制，因為它包含團隊共用的部署設定
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# 部署輸出
+outputs.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 臨時檔案
+*.log
+*.tmp
+
+# 環境變數檔案（包含敏感資訊）
+.env
+.env.local
+.env.*.local
+
+# 建置產生的前端配置（由 build-frontend-config.ps1 產生）
+# 注意：frontend/config.js 會由建置腳本產生，但為了方便開發，暫時不忽略
+# frontend/config.js
+
