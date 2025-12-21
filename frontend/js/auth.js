@@ -1,12 +1,15 @@
 /**
- * Authentication Module
- * Handles login, registration, logout, and layout switching
- * 身分驗證模組：處理登入、註冊、登出及介面切換
+ * Authentication Module - Dropbex
+ * 負責處理：Session 檢查、登入、註冊、驗證碼、登出、以及介面切換
  */
 
+// ==========================================
+// 1. Session 初始化與檢查
+// ==========================================
+
 /**
- * [新增] 檢查當前 Session (網頁載入時執行)
- * 這會讓 F5 重新整理後，依然保持登入狀態
+ * 檢查當前 Session (網頁載入時執行)
+ * 功能：讓 F5 重新整理後，依然保持登入狀態
  */
 function checkCurrentSession() {
     console.log("🔍 Checking session...");
@@ -18,20 +21,18 @@ function checkCurrentSession() {
             const payload = JSON.parse(atob(idToken.split('.')[1]));
             const email = payload.email;
 
-            // 恢復全域狀態
+            // 恢復全域狀態 AppState
             if (typeof AppState !== 'undefined') {
-                // 呼叫 state.js 的方法設定狀態
                 if (typeof AppState.setLoggedIn === 'function') {
                     AppState.setLoggedIn(true, email);
                 } else {
-                    // 相容舊版寫法
                     AppState.isLoggedIn = true;
                     AppState.currentUserEmail = email;
                 }
                 console.log("✅ Session restored for:", email);
             }
 
-            // 更新 UI 顯示為已登入狀態
+            // 更新 UI 並觸發資料同步
             switchToLoggedInLayout(email);
         } catch (e) {
             console.error("Session restore failed (Token invalid):", e);
@@ -42,8 +43,12 @@ function checkCurrentSession() {
     }
 }
 
+// ==========================================
+// 2. 登入與註冊邏輯 (Login & Register)
+// ==========================================
+
 /**
- * Handle Login Form Submission
+ * 處理登入表單送出
  */
 function handleLoginSubmit(event) {
     event.preventDefault();
@@ -56,6 +61,7 @@ function handleLoginSubmit(event) {
         return;
     }
 
+    // 鎖定按鈕避免重複點擊
     btn.disabled = true;
     btn.textContent = 'Logging in...';
 
@@ -76,7 +82,7 @@ function handleLoginSubmit(event) {
             const idToken = result.getIdToken().getJwtToken();
             localStorage.setItem('idToken', idToken);
             
-            // 登入成功，立即更新全域狀態
+            // 更新狀態
             if (typeof AppState !== 'undefined') {
                 if (typeof AppState.setLoggedIn === 'function') {
                     AppState.setLoggedIn(true, email);
@@ -88,6 +94,8 @@ function handleLoginSubmit(event) {
 
             showToast('✅', 'Successfully logged in!');
             switchToLoggedInLayout(email);
+            
+            // 重置按鈕
             btn.disabled = false;
             btn.textContent = 'Login';
         },
@@ -101,7 +109,7 @@ function handleLoginSubmit(event) {
 }
 
 /**
- * Handle Register Form Submission
+ * 處理註冊表單送出
  */
 function handleRegisterSubmit(e) {
     e.preventDefault();
@@ -147,8 +155,12 @@ function handleRegisterSubmit(e) {
     });
 }
 
+// ==========================================
+// 3. 驗證碼處理邏輯 (Verification)
+// ==========================================
+
 /**
- * Handle Account Verification
+ * 提交驗證碼
  */
 function handleConfirmRegistration() {
     const email = document.getElementById('registerEmail').value.trim();
@@ -187,6 +199,9 @@ function handleConfirmRegistration() {
     });
 }
 
+/**
+ * 重發驗證碼
+ */
 function resendCode() {
     const email = document.getElementById('registerEmail').value.trim();
     if (!email) {
@@ -210,15 +225,35 @@ function resendCode() {
     });
 }
 
+/**
+ * 顯示驗證碼輸入區塊
+ */
+function showConfirmSection(email) {
+    const forms = document.querySelectorAll('.auth-form');
+    forms.forEach(f => f.style.display = 'none');
+    
+    const confirmSection = document.getElementById('confirmSection');
+    if (confirmSection) {
+        confirmSection.style.display = 'block';
+        confirmSection.classList.add('active');
+    }
+    const emailInput = document.getElementById('registerEmail');
+    if (emailInput) emailInput.value = email;
+}
+
+/**
+ * 返回註冊表單
+ */
 function handleBackToRegistration() {
     document.getElementById('confirmSection').style.display = 'none';
     document.getElementById('registerForm').style.display = 'block';
     switchTab('register');
 }
 
-/**
- * Handle Logout
- */
+// ==========================================
+// 4. 登出邏輯 (Logout)
+// ==========================================
+
 function handleLogout() {
     // 1. 清除 LocalStorage
     localStorage.removeItem('idToken'); 
@@ -253,10 +288,13 @@ function handleLogout() {
     showToast('✅', 'Logged out successfully');
 }
 
-/**
- * UI Switching Logic
- */
+// ==========================================
+// 5. 介面切換邏輯 (UI Switching)
+// ==========================================
 
+/**
+ * 切換 Login / Register 分頁
+ */
 function switchTab(tab) {
     const tabs = document.querySelectorAll('.auth-tab');
     const forms = document.querySelectorAll('.auth-form');
@@ -264,7 +302,7 @@ function switchTab(tab) {
     const registerForm = document.getElementById('registerForm');
     const confirmSection = document.getElementById('confirmSection');
 
-    // 如果正在顯示驗證區塊，鎖定分頁標籤
+    // 如果正在顯示驗證區塊，鎖定分頁標籤顯示狀態
     if (confirmSection && confirmSection.style.display === 'block') {
         tabs.forEach(t => t.classList.remove('active'));
         if (tab === 'login') tabs[0].classList.add('active');
@@ -272,6 +310,7 @@ function switchTab(tab) {
         return; 
     }
 
+    // 重置所有 Tab 與 Form
     tabs.forEach(t => t.classList.remove('active'));
     forms.forEach(f => f.classList.remove('active'));
 
@@ -279,6 +318,7 @@ function switchTab(tab) {
     if (registerForm) registerForm.style.display = 'none';
     if (confirmSection) confirmSection.style.display = 'none';
 
+    // 啟動目標 Tab
     if (tab === 'login') {
         if(tabs[0]) tabs[0].classList.add('active');
         if (loginForm) {
@@ -294,24 +334,29 @@ function switchTab(tab) {
     }
 }
 
+/**
+ * 切換至「已登入」佈局 (顯示 Dashboard)
+ */
 function switchToLoggedInLayout(email) {
+    // 隱藏登入區塊
     const authCard = document.getElementById('authCard');
     if (authCard) authCard.style.display = 'none';
     
     const beforeLoginCard = document.getElementById('uploadCardBeforeLogin');
     if (beforeLoginCard) beforeLoginCard.style.display = 'none';
     
+    // 顯示頂部狀態列
     const statusBar = document.getElementById('statusBar');
-    if (statusBar) {
-        statusBar.classList.add('visible');
-    }
+    if (statusBar) statusBar.classList.add('visible');
+    
     const emailSpan = document.getElementById('statusBarEmail');
     if (emailSpan) emailSpan.textContent = email;
     
+    // 顯示主 Dashboard Grid
     const loggedInGrid = document.getElementById('loggedInGrid');
     if (loggedInGrid) loggedInGrid.classList.add('visible');
     
-    // 雙重保險：切換介面時再次確認狀態正確
+    // 確保 AppState 同步
     if (typeof AppState !== 'undefined') {
         if (typeof AppState.setLoggedIn === 'function') {
             if (!AppState.isLoggedIn) AppState.setLoggedIn(true, email);
@@ -321,11 +366,17 @@ function switchToLoggedInLayout(email) {
         }
     }
 
-    if (typeof renderFileDashboard === 'function') {
-        renderFileDashboard();
+    // 呼叫 Dashboard 統一入口 (dashboard.js)
+    if (typeof window.refreshAllDashboards === 'function') {
+        window.refreshAllDashboards();
+    } else if (typeof renderFileDashboard === 'function') {
+        renderFileDashboard(); // 舊版相容
     }
 }
 
+/**
+ * 切換至「未登入」佈局 (顯示登入框)
+ */
 function switchToLoginLayout() {
     const authCard = document.getElementById('authCard');
     if (authCard) authCard.style.display = 'block';
@@ -338,17 +389,4 @@ function switchToLoginLayout() {
     
     const loggedInGrid = document.getElementById('loggedInGrid');
     if (loggedInGrid) loggedInGrid.classList.remove('visible');
-}
-
-function showConfirmSection(email) {
-    const forms = document.querySelectorAll('.auth-form');
-    forms.forEach(f => f.style.display = 'none');
-    
-    const confirmSection = document.getElementById('confirmSection');
-    if (confirmSection) {
-        confirmSection.style.display = 'block';
-        confirmSection.classList.add('active');
-    }
-    const emailInput = document.getElementById('registerEmail');
-    if (emailInput) emailInput.value = email;
 }

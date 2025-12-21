@@ -1,233 +1,267 @@
-/* Dashboard Styles - 完整修正版 */
+/* Dashboard Styles - 檔案列表與元件設計 (強制單行圖示版) */
 
-/* 1. 卡片容器設定 */
-.dashboard-card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    max-height: 100%;
-    /* 關鍵：允許 Tooltip 超出卡片邊界顯示 */
-    overflow: visible; 
-}
-
-.dashboard-card .section-title {
-    flex: 0 0 auto;
-    min-height: 0;
-}
-
-/* 2. 檔案列表區域 */
-.dashboard-card .file-list {
-    flex: 1 1 0;
-    min-height: 0;
-    max-height: 100%;
-    overflow-y: auto; /* 保留垂直捲動 */
-    overflow-x: visible; /* 讓 Tooltip 水平方向不被裁切 */
-    
-    /* 修正內距，讓第一筆資料有空間顯示上方的 Tooltip */
-    padding: 35px 8px 20px 8px;   
-    margin-top: 0;   
-}
-
-/* 捲軸美化 */
-.dashboard-card .file-list::-webkit-scrollbar {
-    width: 8px;
-}
-.dashboard-card .file-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-.dashboard-card .file-list::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 10px;
-}
-.dashboard-card .file-list::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
-}
-
-/* 3. 標題區域 */
-.section-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.section-title .sync-time {
-    font-size: 12px;
-    font-weight: normal;
-    color: #6b7280;
-}
-
-/* 4. 檔案列表項目 */
+/* --- 檔案列表容器 --- */
 .file-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 5px;
+    margin-top: 10px;
+    min-height: 0;
+    width: 100%; 
 }
 
+/* --- 檔案列 (垂直分層設計) --- */
 .file-row {
     display: flex;
-    align-items: center;
-    padding: 16px;
+    flex-direction: column; /* 垂直堆疊 */
+    width: 100%;            
+    padding: 12px;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    margin-bottom: 10px;
     background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    transition: all 0.2s ease;
-    gap: 15px;
-    /* 關鍵：設定相對定位，但不隱藏溢出內容 */
-    position: relative;
-    overflow: visible !important;
-    z-index: 1;
+    transition: all 0.2s;
+    overflow: hidden;
+    align-items: flex-start;
 }
 
 .file-row:hover {
-    border-color: #a5b4fc;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
-    transform: translateY(-2px);
-    /* 滑鼠移入時提高層級，確保 Tooltip 蓋過下方的檔案 */
-    z-index: 100; 
+    background-color: #f8fafc;
+    border-color: #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* 上層：圖示 + 資訊 */
+.file-content-top {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: 100%;
+    min-width: 0; /* 關鍵：允許縮小 */
+    margin-bottom: 8px;    
 }
 
 .file-icon {
     font-size: 24px;
-    flex: 0 0 auto;
+    flex-shrink: 0;
 }
 
 .file-info {
-    flex: 1 1 0;
-    min-width: 0;
-    overflow: hidden;
+    flex: 1;                
+    min-width: 0; /* 關鍵：觸發文字截斷 */
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
 }
 
+/* --- 檔名特效 (單行 + 漸層淡出) --- */
 .file-title {
-    font-weight: 500;
-    color: #1f2937;
-    font-size: 15px;
-    word-wrap: break-word;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    white-space: nowrap;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    display: block;
+    width: 100%;
 }
 
 .file-meta {
-    font-size: 13px;
-    color: #6b7280;
-    margin-top: 2px;
-}
-
-/* 狀態標籤 */
-.file-status {
-    padding: 4px 12px;
-    border-radius: 20px;
     font-size: 12px;
-    font-weight: 500;
-    flex: 0 0 auto;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     white-space: nowrap;
+    overflow: hidden;
 }
-.status-normal { background: #ecfdf5; color: #059669; }
-.status-deleted { background: #fef2f2; color: #dc2626; }
-.status-expired { background: #f3f4f6; color: #6b7280; }
 
-/* 5. 按鈕與 Tooltip (核心修正區) */
+/* --- 狀態標籤 --- */
+.status-tag {
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 10px;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    flex-shrink: 0;
+}
+
+/* --- 下層：操作按鈕區 (關鍵修正) --- */
 .file-actions {
     display: flex;
-    gap: 10px;
-    align-items: center;
-    flex: 0 0 auto;
+    /* 改為 Space-between 讓按鈕平均分散，或者 flex-end 靠右 */
+    justify-content: flex-end; 
+    
+    /* ★★★ 強制不換行 ★★★ */
+    flex-wrap: nowrap !important;
+    
+    gap: 6px; /* 按鈕之間的間距 */
+    width: 100%;
+    padding-top: 8px;
+    border-top: 1px dashed #f1f5f9; 
+    overflow: visible; /* 確保陰影不被切掉 */
 }
 
-/* 通用按鈕樣式 */
+/* 按鈕樣式：改為方形圖示按鈕 */
 .action-btn {
-    display: inline-flex;
+    /* 設定固定寬高，確保四個按鈕能塞進一行 */
+    width: 32px; 
+    height: 32px;
+    padding: 0; /* 移除內距，讓 Icon 居中 */
+    
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    
+    /* Flex 居中大法 */
+    display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    background: white;
-    border: 2px solid #667eea;
-    color: #667eea;
+    
+    transition: all 0.2s;
+    flex: 0 0 auto; /* 禁止按鈕縮小 */
+}
+
+.action-btn:hover { 
+    background: #f1f5f9; 
+    border-color: #cbd5e1; 
+    transform: translateY(-1px); 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* --- 登出與使用者資訊 --- */
+.user-info { font-size: 13px; color: #4b5563; }
+#statusBarEmail { font-weight: 500; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.logout-btn-compact {
+    width: 100%;
+    background-color: #ffffff;
+    color: #4b5563;
+    border: 1px solid #e5e7eb;
+    padding: 8px 0;
     border-radius: 8px;
-    font-weight: 500;
-    font-size: 18px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    /* 關鍵：作為 Tooltip 的定位基準點 */
-    position: relative; 
+}
+.logout-btn-compact:hover { background-color: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+
+/* Dashboard Styles - 閱讀器元件 (從 HTML 移入) */
+
+/* 閱讀器卡片：修正 Flex 屬性以填滿空間 */
+.viewer-card {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important; /* 移除內距讓 iframe 滿版 */
+    min-height: 0;
+    overflow: hidden;
 }
 
-.action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+/* 閱讀器標題列 */
+.viewer-header {
+    background: #f8fafc;
+    padding: 10px 15px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+    flex: 0 0 auto; /* 防止被壓縮 */
 }
 
-/* 個別顏色設定 */
-.action-btn.download { border-color: #3b82f6; color: #3b82f6; }
-.action-btn.download:hover { background: #3b82f6; color: white; }
-
-.action-btn.share { border-color: #10b981; color: #10b981; }
-.action-btn.share:hover { background: #10b981; color: white; }
-
-.action-btn.delete { border-color: #ef4444; color: #ef4444; }
-.action-btn.delete:hover { background: #ef4444; color: white; }
-
-
-/* --- ✨ Tooltip 完美修正版 ✨ --- */
-
-/* Tooltip 本體 (黑色框框) */
-.action-btn[data-tooltip]:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;       /* 位於按鈕正上方 */
-    left: 50%;
-    transform: translateX(-50%);
-    
-    background-color: #1f2937; /* 深黑色 */
-    color: white;
-    padding: 6px 10px;
+/* 關閉按鈕 */
+.close-viewer-btn {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 4px 12px;
     border-radius: 6px;
+    cursor: pointer;
     font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-    
-    opacity: 0;
-    pointer-events: none;
-    margin-bottom: 8px; /* 抬高一點，留空間給箭頭 */
-    z-index: 1000;
-    animation: fadeIn 0.2s forwards;
+    transition: all 0.2s;
+    color: #64748b;
 }
 
-/* Tooltip 箭頭 (小三角形) */
-.action-btn[data-tooltip]:hover::before {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    
-    /* 畫出倒三角形 */
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-top: 6px solid #1f2937; /* 顏色需與框框一致 */
-    
-    opacity: 0;
-    pointer-events: none;
-    margin-bottom: 2px; /* 微調位置，讓它接在框框下面 */
-    z-index: 1000;
-    animation: fadeIn 0.2s forwards;
+.close-viewer-btn:hover {
+    background: #fef2f2;
+    color: #ef4444;
+    border-color: #fca5a5;
 }
 
-/* 簡單的淡入動畫 */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateX(-50%) translateY(5px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Iframe 預覽視窗 */
+#docViewer {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #f1f5f9;
+    display: none; /* 預設隱藏，由 JS 控制顯示 */
 }
 
-/* RWD 設定 */
-@media (max-width: 768px) {
-    .action-btn { width: 36px; height: 36px; font-size: 16px; }
-    .file-row { padding: 12px; }
+/* 空狀態提示 */
+#viewerPlaceholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    background: #f8fafc;
+}
+
+/* --- Public Repository 搜尋欄修正 --- */
+
+/* 確保搜尋容器使用 Flex 排列 */
+.search-container {
+    display: flex !important;
+    gap: 6px !important;
+    margin-bottom: 12px !important;
+    width: 100%; /* 限制容器不超過父層 */
+    box-sizing: border-box;
+}
+
+/* 輸入框：佔據剩餘空間，但允許縮小 */
+#crawlerSearchInput {
+    flex: 1;       /* 自動填滿剩餘空間 */
+    min-width: 0;  /* ★關鍵：防止內容撐開導致溢出 */
+    width: 100%;   /* 重置寬度 */
+    margin-bottom: 0 !important;
+    padding: 6px 10px;
+    font-size: 13px;
+    height: 32px; /* 固定高度，對齊按鈕 */
+}
+
+/* 搜尋按鈕：固定大小，禁止被壓縮 */
+.search-container button {
+    flex: 0 0 auto; /* 禁止縮小 */
+    width: auto !important;
+    margin-top: 0 !important;
+    padding: 0 12px !important;
+    height: 32px; /* 固定高度 */
+    font-size: 13px;
+    white-space: nowrap; /* 文字不換行 */
+    
+    /* 美化按鈕 */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-container button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
