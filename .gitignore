@@ -3,3 +3,4 @@ node_modules/
 __pycache__/
 samconfig.toml
 frontend/js/config.js
+.history/
