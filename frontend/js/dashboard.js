@@ -363,7 +363,6 @@ function renderPublicFileList(files) {
             icon = getFileIcon(file.name);
             tagHtml = `<span class="status-tag status-stored" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">Public</span>`;
             actionHtml = `
-                <button class="action-btn download" title="Download" style="color: #10b981;" onclick="handleDownloadFile('${safeKey}')">⬇️</button>
                 <button class="action-btn ai-summary" title="AI Summary" style="color: #f59e0b;" onclick="handleViewSummary('${safeKey}')">✨</button>
                 <button class="action-btn share" title="Copy Link" onclick="handlePublicShare('${safeKey}')">➦</button>
                 <button class="action-btn download" title="Download" onclick="handleDownloadFile('${safeKey}')">⬇</button>
@@ -373,7 +372,6 @@ function renderPublicFileList(files) {
             icon = '🌐';
             tagHtml = `<span class="status-tag status-stored" style="background: #fef3c7; color: #d97706; border-color: #fcd34d;">arXiv</span>`;
             actionHtml = `
-                <button class="action-btn download" title="Download" style="color: #10b981;" onclick="handleDownloadFile('${safeKey}')">⬇️</button>
                 <button class="action-btn ai-summary" title="Preview Abstract" style="color: #f59e0b;" onclick="handleExternalSummary(${index})">✨</button>
                 <button class="action-btn download" title="Save to My Collection" style="color: #10b981;" onclick="handleSaveToCollection(${index})">📥</button>
                 <button class="action-btn share" title="Copy Link" onclick="handlePublicShare('${safeKey}')">➦</button>
