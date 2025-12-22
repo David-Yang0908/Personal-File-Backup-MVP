@@ -1,0 +1,170 @@
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Dropbex MVP - Full Stack Architecture
+  S3 Storage + Cognito Auth + Python Lambda (Groq AI)
+
+Parameters:
+  AppName:
+    Type: String
+    Default: dropbex-app-2025
+    Description: 應用程式名稱
+  GroqApiKey:
+    Type: String
+    NoEcho: true
+    Description: 請輸入您的 Groq API Key (用於 llama-3.1-8b-instant)
+
+Resources:
+  # ==========================================
+  # 1. S3 儲存桶 (儲存個人與公共檔案)
+  # ==========================================
+  StorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      # 使用 AccountId 確保名稱在全球 S3 中不重複
+      BucketName: !Sub ${AppName}-storage-${AWS::AccountId}
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+            AllowedOrigins: ['*']
+            ExposedHeaders: [ETag, x-amz-meta-custom-header]
+            MaxAge: 3000
+
+  # ==========================================
+  # 2. Lambda - Groq AI 摘要生成器 (Python)
+  # ==========================================
+  SummaryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      # [已修正] 指向 summary_handler.py 內的 lambda_handler 函數
+      Handler: summary_handler.lambda_handler 
+      Runtime: python3.11
+      Timeout: 60
+      MemorySize: 256
+      Environment:
+        Variables:
+          GROQ_API_KEY: !Ref GroqApiKey
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Sub ${AppName}-storage-${AWS::AccountId}
+        - S3WritePolicy:
+            BucketName: !Sub ${AppName}-storage-${AWS::AccountId}
+      Events:
+        FileUploadEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref StorageBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: uploads/
+
+  # ==========================================
+  # 3. Cognito - 使用者驗證系統
+  # ==========================================
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AppName}-user-pool
+      AutoVerifiedAttributes: [email]
+      UsernameAttributes: [email]
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AppName}-client
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+
+  IdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: !Sub ${AppName}IdentityPool
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref UserPoolClient
+          ProviderName: !GetAtt UserPool.ProviderName
+
+  # ==========================================
+  # 4. IAM Role - 授權前端 JS 直接存取 S3
+  # ==========================================
+  CognitoAuthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: cognito-identity.amazonaws.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+      Policies:
+        - PolicyName: DropbexS3FullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:DeleteObject
+                Resource: 
+                  - !Sub arn:aws:s3:::${StorageBucket}
+                  - !Sub arn:aws:s3:::${StorageBucket}/*
+
+  IdentityPoolRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref IdentityPool
+      Roles:
+        authenticated: !GetAtt CognitoAuthRole.Arn
+
+# ==========================================
+  # 5. Lambda - 產生 S3 預簽名下載連結 (Node.js)
+  # ==========================================
+  DownloadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      # 請確認路徑是否為 src/RequestDownloadHandler/
+      CodeUri: src/RequestDownloadHandler/ 
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Timeout: 10
+      Environment:
+        Variables:
+          # 將 S3 Bucket 名稱傳給 Lambda
+          BUCKET_NAME: !Ref StorageBucket
+      Policies:
+        # 賦予 Lambda 讀取 S3 的權限以產生預簽名連結
+        - S3ReadPolicy:
+            BucketName: !Sub ${AppName}-storage-${AWS::AccountId}
+      Events:
+        # 建立 API Gateway 觸發點
+        DownloadApi:
+          Type: Api
+          Properties:
+            Path: /download
+            Method: get
+
+# ==========================================
+# 6. 輸出結果 (部署完後請複製到 js/config.js)
+# ==========================================
+Outputs:
+  Region:
+    Value: !Ref AWS::Region
+  S3BucketName:
+    Value: !Ref StorageBucket
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  IdentityPoolId:
+    Value: !Ref IdentityPool
