@@ -34,6 +34,11 @@ function checkCurrentSession() {
 
             // 更新 UI 並觸發資料同步
             switchToLoggedInLayout(email);
+            
+            // 檢查訂閱狀態（用於 F5 重新整理）
+            if (typeof checkAndPromptSubscription === 'function') {
+                checkAndPromptSubscription(email);
+            }
         } catch (e) {
             console.error("Session restore failed (Token invalid):", e);
             handleLogout(); // Token 有問題，強制登出
@@ -374,6 +379,11 @@ function switchToLoggedInLayout(email) {
         window.refreshAllDashboards();
     } else if (typeof renderFileDashboard === 'function') {
         renderFileDashboard(); 
+    }
+    
+    // 5. 檢查訂閱狀態（用於帳號密碼登入）
+    if (typeof checkAndPromptSubscription === 'function') {
+        checkAndPromptSubscription(email);
     }
 }
 

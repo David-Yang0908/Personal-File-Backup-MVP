@@ -737,7 +737,252 @@ async function handlePublicShare(key) {
 }
 
 function handleTeamShare(s3Key) {
-    showToast('ℹ️', '此功能開發中 (Team Share)');
+    console.log('[Share] Opening share modal for file:', s3Key);
+    showShareModal(s3Key);
+}
+
+// ==========================================
+// 6.5. Share 功能實作
+// ==========================================
+
+/**
+ * 顯示 Share 模態框
+ * @param {string} s3Key - S3 檔案路徑
+ */
+function showShareModal(s3Key) {
+    console.log('[Share] Creating share modal for:', s3Key);
+    
+    // 檢查是否已經有模態框存在
+    const existingModal = document.getElementById('shareModal');
+    if (existingModal) {
+        console.log('[Share] Modal already exists, removing old one');
+        existingModal.remove();
+    }
+    
+    const existingOverlay = document.getElementById('shareModalOverlay');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+
+    // 創建模態框遮罩
+    const modalOverlay = document.createElement('div');
+    modalOverlay.id = 'shareModalOverlay';
+    modalOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+
+    // 創建模態框內容
+    const modal = document.createElement('div');
+    modal.id = 'shareModal';
+    modal.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 600px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
+    `;
+
+    // 關閉按鈕
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #6b7280;
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        transition: all 0.2s;
+    `;
+    closeBtn.onmouseover = function() {
+        this.style.background = '#f3f4f6';
+        this.style.color = '#374151';
+    };
+    closeBtn.onmouseout = function() {
+        this.style.background = 'none';
+        this.style.color = '#6b7280';
+    };
+    closeBtn.onclick = closeShareModal;
+
+    modal.innerHTML = `
+        <h2 style="font-size: 20px; font-weight: 600; color: #374151; margin-bottom: 24px;">分享檔案</h2>
+        <form id="shareForm" onsubmit="event.preventDefault(); handleShareSubmit('${s3Key.replace(/'/g, "\\'")}');">
+            <div class="form-group">
+                <label class="form-label">傳送到電子郵件</label>
+                <input type="email" class="form-input" id="shareRecipientEmail" placeholder="recipient@example.com" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">想對他說的話</label>
+                <textarea class="form-input" id="shareCustomMessage" rows="6" placeholder="輸入您的訊息..." style="resize: vertical; font-family: inherit;" required></textarea>
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                <button type="button" onclick="closeShareModal()" style="
+                    background: #f3f4f6;
+                    color: #374151;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                    取消
+                </button>
+                <button type="submit" id="shareSubmitBtn" style="
+                    background: #667eea;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                " onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">
+                    發送
+                </button>
+            </div>
+        </form>
+    `;
+
+    modal.insertBefore(closeBtn, modal.firstChild);
+    modalOverlay.appendChild(modal);
+    document.body.appendChild(modalOverlay);
+    
+    console.log('[Share] Share modal displayed');
+}
+
+/**
+ * 處理 Share 表單提交
+ * @param {string} s3Key - S3 檔案路徑
+ */
+async function handleShareSubmit(s3Key) {
+    const recipientEmail = document.getElementById('shareRecipientEmail').value.trim();
+    const customMessage = document.getElementById('shareCustomMessage').value.trim();
+    const submitBtn = document.getElementById('shareSubmitBtn');
+    
+    console.log('[Share] User submitted form, recipient:', recipientEmail);
+    
+    // 驗證欄位
+    if (!recipientEmail || !customMessage) {
+        showToast('⚠️', '請填寫所有欄位');
+        return;
+    }
+    
+    // 驗證 email 格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+        showToast('⚠️', '請輸入有效的電子郵件地址');
+        return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = '發送中...';
+    
+    try {
+        // 1. 檢查收件人是否已訂閱
+        console.log('[Share] Checking recipient subscription status');
+        const checkResult = await checkUserSubscription(recipientEmail);
+        const isRecipientSubscribed = checkResult.isSubscribed === true;
+        
+        console.log('[Share] Recipient subscription check result:', isRecipientSubscribed);
+        
+        if (!isRecipientSubscribed) {
+            showToast('❌', '對方尚未到信箱點選確認接收，因此無法接收訊息');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '發送';
+            return;
+        }
+        
+        // 2. 生成預簽名下載連結
+        console.log('[Share] Generating presigned download URL');
+        const s3 = new AWS.S3();
+        const fileName = s3Key.split('/').pop();
+        
+        const downloadUrl = await s3.getSignedUrlPromise('getObject', {
+            Bucket: AWS_CONFIG.s3BucketName,
+            Key: s3Key,
+            Expires: 604800 // 7 天
+        });
+        
+        console.log('[Share] Presigned URL generated');
+        
+        // 3. 呼叫 Share API
+        console.log('[Share] Calling share API with params:', {
+            fileName: fileName,
+            recipientEmail: recipientEmail,
+            customMessage: customMessage
+        });
+        
+        const response = await fetch(AWS_CONFIG.apiGatewayUrl + '/share', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fileName: fileName,
+                recipientEmail: recipientEmail,
+                customMessage: customMessage,
+                downloadUrl: downloadUrl
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('[Share] Share API failed:', response.status, errorData);
+            showToast('❌', errorData.error || '分享失敗，請稍後再試');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '發送';
+            return;
+        }
+        
+        const data = await response.json();
+        console.log('[Share] Share notification sent successfully:', data);
+        
+        showToast('✅', '分享通知已發送');
+        closeShareModal();
+        
+    } catch (error) {
+        console.error('[Share] Error in handleShareSubmit:', error);
+        showToast('❌', '分享失敗，請稍後再試');
+        submitBtn.disabled = false;
+        submitBtn.textContent = '發送';
+    }
+}
+
+/**
+ * 關閉 Share 模態框
+ */
+function closeShareModal() {
+    const modal = document.getElementById('shareModal');
+    const overlay = document.getElementById('shareModalOverlay');
+    
+    if (modal) modal.remove();
+    if (overlay) overlay.remove();
+    
+    console.log('[Share] Share modal closed');
 }
 
 // ==========================================
@@ -823,6 +1068,9 @@ window.handleDownloadFile = handleDownloadFile;
 window.handleSaveToCollection = handleSaveToCollection;
 window.handlePublicShare = handlePublicShare;
 window.handleTeamShare = handleTeamShare;
+window.showShareModal = showShareModal;
+window.handleShareSubmit = handleShareSubmit;
+window.closeShareModal = closeShareModal;
 window.switchListTab = switchListTab;
 window.handleViewFile = handleViewFile;
 window.handleRestore = handleRestore;
