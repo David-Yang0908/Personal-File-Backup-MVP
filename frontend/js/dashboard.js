@@ -774,10 +774,13 @@ function showShareModal(s3Key) {
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
         z-index: 10000;
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
     `;
 
     // 創建模態框內容
@@ -786,10 +789,11 @@ function showShareModal(s3Key) {
     modal.style.cssText = `
         background: white;
         border-radius: 16px;
-        padding: 32px;
-        max-width: 600px;
-        width: 90%;
+        padding: 40px;
+        max-width: 500px;
+        width: 100%;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        border: 1px solid #e5e7eb;
         position: relative;
         max-height: 90vh;
         overflow-y: auto;
@@ -800,67 +804,130 @@ function showShareModal(s3Key) {
     closeBtn.innerHTML = '✕';
     closeBtn.style.cssText = `
         position: absolute;
-        top: 16px;
-        right: 16px;
-        background: none;
+        top: 20px;
+        right: 20px;
+        background: transparent;
         border: none;
         font-size: 24px;
-        color: #6b7280;
+        color: #9ca3af;
         cursor: pointer;
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
         border-radius: 8px;
         transition: all 0.2s;
+        line-height: 1;
     `;
     closeBtn.onmouseover = function() {
         this.style.background = '#f3f4f6';
         this.style.color = '#374151';
     };
     closeBtn.onmouseout = function() {
-        this.style.background = 'none';
-        this.style.color = '#6b7280';
+        this.style.background = 'transparent';
+        this.style.color = '#9ca3af';
     };
     closeBtn.onclick = closeShareModal;
 
     modal.innerHTML = `
-        <h2 style="font-size: 20px; font-weight: 600; color: #374151; margin-bottom: 24px;">分享檔案</h2>
+        <div style="margin-bottom: 32px;">
+            <h2 style="font-size: 22px; font-weight: 600; color: #1f2937; margin: 0 0 8px 0;">分享檔案</h2>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">將檔案分享給其他使用者</p>
+        </div>
+        
         <form id="shareForm" onsubmit="event.preventDefault(); handleShareSubmit('${s3Key.replace(/'/g, "\\'")}');">
-            <div class="form-group">
-                <label class="form-label">傳送到電子郵件</label>
-                <input type="email" class="form-input" id="shareRecipientEmail" placeholder="recipient@example.com" required>
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">
+                    傳送到電子郵件
+                </label>
+                <input 
+                    type="email" 
+                    id="shareRecipientEmail" 
+                    placeholder="recipient@example.com" 
+                    required
+                    style="
+                        width: 100%;
+                        padding: 12px 16px;
+                        border: 2px solid #e5e7eb;
+                        border-radius: 8px;
+                        font-size: 15px;
+                        transition: all 0.2s;
+                        font-family: inherit;
+                        box-sizing: border-box;
+                        background: #f9fafb;
+                    "
+                    onfocus="this.style.borderColor='#667eea'; this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)';"
+                    onblur="this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'; this.style.boxShadow='none';"
+                >
             </div>
-            <div class="form-group">
-                <label class="form-label">想對他說的話</label>
-                <textarea class="form-input" id="shareCustomMessage" rows="6" placeholder="輸入您的訊息..." style="resize: vertical; font-family: inherit;" required></textarea>
+            
+            <div style="margin-bottom: 32px;">
+                <label style="display: block; margin-bottom: 8px; color: #374151; font-weight: 500; font-size: 14px;">
+                    想對他說的話
+                </label>
+                <textarea 
+                    id="shareCustomMessage" 
+                    rows="5" 
+                    placeholder="輸入您的訊息..."
+                    required
+                    style="
+                        width: 100%;
+                        padding: 12px 16px;
+                        border: 2px solid #e5e7eb;
+                        border-radius: 8px;
+                        font-size: 15px;
+                        transition: all 0.2s;
+                        font-family: inherit;
+                        box-sizing: border-box;
+                        resize: vertical;
+                        line-height: 1.5;
+                        min-height: 120px;
+                        background: #f9fafb;
+                    "
+                    onfocus="this.style.borderColor='#667eea'; this.style.background='#fff'; this.style.boxShadow='0 0 0 3px rgba(102, 126, 234, 0.1)';"
+                    onblur="this.style.borderColor='#e5e7eb'; this.style.background='#f9fafb'; this.style.boxShadow='none';"
+                ></textarea>
             </div>
-            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
-                <button type="button" onclick="closeShareModal()" style="
-                    background: #f3f4f6;
-                    color: #374151;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+            
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button 
+                    type="button" 
+                    onclick="closeShareModal()"
+                    style="
+                        background: white;
+                        color: #6b7280;
+                        border: 1px solid #d1d5db;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    "
+                    onmouseover="this.style.background='#f9fafb'; this.style.borderColor='#9ca3af';"
+                    onmouseout="this.style.background='white'; this.style.borderColor='#d1d5db';"
+                >
                     取消
                 </button>
-                <button type="submit" id="shareSubmitBtn" style="
-                    background: #667eea;
-                    color: white;
-                    border: none;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                " onmouseover="this.style.background='#5568d3'" onmouseout="this.style.background='#667eea'">
+                <button 
+                    type="submit" 
+                    id="shareSubmitBtn"
+                    style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s;
+                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                    "
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(102, 126, 234, 0.4)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)';"
+                >
                     發送
                 </button>
             </div>
