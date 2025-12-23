@@ -90,9 +90,10 @@ exports.handler = async (event) => {
             if (listResponse.Subscriptions) {
                 for (const subscription of listResponse.Subscriptions) {
                     // 只檢查 email protocol 的訂閱，且狀態為 "Confirmed"
+                    // SubscriptionArn 必須是真正的 ARN，排除 'PendingConfirmation' 和 'Deleted'
                     if (subscription.Protocol === 'email' && 
                         subscription.Endpoint === email &&
-                        subscription.SubscriptionArn !== 'PendingConfirmation') {
+                        subscription.SubscriptionArn.startsWith('arn:aws:sns:')) {
                         isSubscribed = true;
                         break;
                     }

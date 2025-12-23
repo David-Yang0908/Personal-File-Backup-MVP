@@ -44,6 +44,7 @@ exports.handler = async (event) => {
         const fileName = body.fileName;
         const recipientEmail = body.recipientEmail;
         const customMessage = body.customMessage;
+        const downloadUrl = body.downloadUrl; // 選填參數
         
         if (!fileName) {
             return {
@@ -99,20 +100,31 @@ exports.handler = async (event) => {
             };
         }
         
-        // 準備 SNS 訊息內容
+        // 準備 SNS 訊息內容（用於 JSON 格式）
         const notificationMessage = {
             event: 'file_shared',
             fileName: fileName,
             recipientEmail: recipientEmail,
             customMessage: customMessage,
+            downloadUrl: downloadUrl || '',
             timestamp: new Date().toISOString()
         };
+        
+        // 準備人類可讀的郵件內容
+        let emailContent = `檔案名稱: ${fileName}\n\n`;
+        emailContent += `分享者的話:\n${customMessage}\n\n`;
+        
+        if (downloadUrl) {
+            emailContent += `下載連結:\n${downloadUrl}\n\n`;
+        }
+        
+        emailContent += `---\n此訊息由 Dropbex 系統自動發送`;
         
         // 發送 SNS 訊息
         const params = {
             TopicArn: topicArn,
-            Message: JSON.stringify(notificationMessage, null, 2),
-            Subject: `File Shared: ${fileName}`,
+            Message: emailContent, // 使用人類可讀的格式
+            Subject: `[Dropbex] 有人分享了檔案給您`,
             MessageAttributes: {
                 eventType: {
                     DataType: 'String',
