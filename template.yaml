@@ -129,7 +129,16 @@ Resources:
         authenticated: !GetAtt CognitoAuthRole.Arn
 
   # ==========================================
-  # 4. Lambda Functions
+  # 5. SNS Topic - 通知系統
+  # ==========================================
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${AppName}-notifications
+      DisplayName: Dropbex Notifications
+
+  # ==========================================
+  # 6. Lambda - 產生 S3 預簽名下載連結 (Node.js)
   # ==========================================
 
   # [原有功能] Groq AI 摘要生成 (Python)
@@ -250,6 +259,86 @@ Resources:
             Method: POST
             RestApiId: !Ref Api
 
+
+  # ==========================================
+  # 7. Lambda - Email 訂閱處理器 (Node.js)
+  # ==========================================
+  SubscribeEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/SubscribeEmailHandler/
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Timeout: 10
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref NotificationTopic
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sns:Subscribe
+              Resource: !Ref NotificationTopic
+      Events:
+        SubscribeApi:
+          Type: Api
+          Properties:
+            Path: /subscribe-topic
+            Method: post
+
+  # ==========================================
+  # 8. Lambda - 檔案分享通知處理器 (Node.js)
+  # ==========================================
+  ShareFileFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/ShareFileHandler/
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Timeout: 10
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref NotificationTopic
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt NotificationTopic.TopicName
+      Events:
+        ShareApi:
+          Type: Api
+          Properties:
+            Path: /share
+            Method: post
+
+  # ==========================================
+  # 9. Lambda - 檢查 Subscription 狀態 (Node.js)
+  # ==========================================
+  CheckSubscriptionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/CheckSubscriptionHandler/
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Timeout: 10
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref NotificationTopic
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sns:ListSubscriptionsByTopic
+              Resource: !Ref NotificationTopic
+      Events:
+        CheckSubscriptionApi:
+          Type: Api
+          Properties:
+            Path: /check-subscription
+            Method: post
+
+
+# ==========================================
+# 6. 輸出結果 (Outputs)
+# ==========================================
 Outputs:
   Region:
     Value: !Ref AWS::Region
@@ -264,3 +353,15 @@ Outputs:
     Value: !Ref UserPoolClient
   IdentityPoolId:
     Value: !Ref IdentityPool
+  # 基礎 API URL
+  ApiBaseUrl:
+    Description: "API Gateway Base URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+  # 專門給 config.js 用的下載 URL
+  DownloadApiUrl:
+    Description: "Download Endpoint URL (Copy this to config.js)"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/download"
+      # SNS Topic ARN
+  NotificationTopicArn:
+    Description: "SNS Topic ARN for notifications"
+    Value: !Ref NotificationTopic
